@@ -1,3 +1,2 @@
-# No third-party deps yet — the echo skeleton uses only the stdlib.
-# Add the OpenAI-compatible client here when wiring in Fireworks, e.g.:
-# openai>=1.0.0
+# Fireworks is OpenAI-compatible; we point the OpenAI SDK at FIREWORKS_BASE_URL.
+openai>=1.30.0

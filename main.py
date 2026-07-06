@@ -19,11 +19,15 @@ import json
 import os
 import sys
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 
 from agent import solve
 
 INPUT_PATH = os.environ.get("INPUT_PATH", "/input/tasks.json")
 OUTPUT_PATH = os.environ.get("OUTPUT_PATH", "/output/results.json")
+# Concurrent Fireworks calls: the 10-min budget with up-to-30s requests makes
+# sequential runs risky beyond ~20 tasks; parallelism removes that bottleneck.
+MAX_WORKERS = int(os.environ.get("MAX_WORKERS", "8"))
 
 
 def load_tasks(path: str) -> list[dict]:
@@ -42,18 +46,24 @@ def write_results(path: str, results: list[dict]) -> None:
         json.dump(results, f, ensure_ascii=False, indent=2)
 
 
+def _solve_one(task: dict, index: int) -> dict:
+    task_id = task.get("task_id", f"idx_{index}")
+    prompt = task.get("prompt", "")
+    try:
+        answer = solve(prompt)
+    except Exception:  # never let one task abort the batch
+        traceback.print_exc()
+        answer = ""
+    return {"task_id": task_id, "answer": answer}
+
+
 def run(tasks: list[dict]) -> list[dict]:
-    results: list[dict] = []
-    for i, task in enumerate(tasks):
-        task_id = task.get("task_id", f"idx_{i}")
-        prompt = task.get("prompt", "")
-        try:
-            answer = solve(prompt)
-        except Exception:  # never let one task abort the batch
-            traceback.print_exc()
-            answer = ""
-        results.append({"task_id": task_id, "answer": answer})
-    return results
+    if len(tasks) <= 1:
+        return [_solve_one(t, i) for i, t in enumerate(tasks)]
+    workers = min(MAX_WORKERS, len(tasks))
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        # pool.map preserves input order in its results
+        return list(pool.map(_solve_one, tasks, range(len(tasks))))
 
 
 def main() -> int:
@@ -64,6 +74,14 @@ def main() -> int:
         return 1
 
     print(f"Loaded {len(tasks)} task(s) from {INPUT_PATH}", file=sys.stderr)
+
+    try:  # log tier->model mapping; never fatal (e.g. env not set locally)
+        from llm import describe_tiers
+
+        print(f"Model tiers: {describe_tiers()}", file=sys.stderr)
+    except Exception as e:
+        print(f"WARN: could not resolve model tiers: {e}", file=sys.stderr)
+
     results = run(tasks)
 
     try:
@@ -73,6 +91,19 @@ def main() -> int:
         return 1
 
     print(f"Wrote {len(results)} result(s) to {OUTPUT_PATH}", file=sys.stderr)
+
+    try:  # report token usage — the scored metric
+        from llm import usage
+
+        u = usage()
+        print(
+            f"Tokens: total={u['total']} (prompt={u['prompt']} "
+            f"completion={u['completion']}) over {u['calls']} call(s)",
+            file=sys.stderr,
+        )
+    except Exception:
+        pass
+
     return 0
 
 

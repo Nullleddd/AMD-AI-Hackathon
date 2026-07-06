@@ -5,6 +5,6 @@
   { "task_id": "t4", "prompt": "Summarise the following text in one sentence: The quick brown fox jumped over the lazy dog while the sun set behind the hills." },
   { "task_id": "t5", "prompt": "Extract all named entities (person, organization, location, date) from: Tim Cook announced Apple's new office in Austin on March 3, 2023." },
   { "task_id": "t6", "prompt": "Fix this code:\n```python\ndef add(a, b):\n    return a - b\n```" },
-  { "task_id": "t7", "prompt": "Three friends sit in a row. Alice is not next to Bob. Carol is on the left end. Who sits in the middle? Deduce from the clues." },
+  { "task_id": "t7", "prompt": "Three friends sit in a row. Alice is not next to Carol. Carol is on the left end. Who sits in the middle? Deduce from the clues." },
   { "task_id": "t8", "prompt": "Write a function that returns the nth Fibonacci number." }
 ]
