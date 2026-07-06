@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Local dev secrets — harness injects the real values at eval time
+.env
+
+# Generated run output
+sample_output/
+/output/
